@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { AppView, ProfileEntry } from './types';
+import { DEFAULT_RATINGS } from './types';
 import { useProfileStore } from './store/useProfileStore';
 import ProfileView from './components/ProfileView';
 import TbrView from './components/TbrView';
@@ -49,6 +50,7 @@ export default function App() {
   const [view, setView] = useState<AppView>('profile');
   const [editingEntry, setEditingEntry] = useState<ProfileEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<ProfileEntry | null>(null);
+  const [pendingTbrId, setPendingTbrId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
   const searchConfig = useMemo(() => ({
@@ -68,8 +70,17 @@ export default function App() {
   }
 
   function handleMoveToBookshelf(tbrEntryId: string) {
-    const entry = promoteFromTbr(tbrEntryId);
-    if (entry) setEditingEntry(entry);
+    // Open the rating modal with a temporary entry — only promote on save
+    const tbrEntry = tbr.find((e) => e.id === tbrEntryId);
+    if (!tbrEntry) return;
+    const tempEntry: ProfileEntry = {
+      id: crypto.randomUUID(),
+      book: tbrEntry.book,
+      ratings: structuredClone(DEFAULT_RATINGS),
+      addedAt: new Date().toISOString(),
+    };
+    setPendingTbrId(tbrEntryId);
+    setEditingEntry(tempEntry);
   }
 
   const tabs: { id: AppView; label: string; locked?: boolean }[] = [
@@ -220,8 +231,20 @@ export default function App() {
       {editingEntry && (
         <RatingModal
           entry={editingEntry}
-          onSave={(id, ratings) => updateRatings(id, ratings)}
-          onClose={() => setEditingEntry(null)}
+          onSave={(id, ratings) => {
+            if (pendingTbrId) {
+              // Promote from TBR on save, using the temp entry's id
+              const promoted = promoteFromTbr(pendingTbrId);
+              if (promoted) updateRatings(promoted.id, ratings);
+              setPendingTbrId(null);
+            } else {
+              updateRatings(id, ratings);
+            }
+          }}
+          onClose={() => {
+            setEditingEntry(null);
+            setPendingTbrId(null); // cancel — book stays in TBR
+          }}
         />
       )}
       {showSettings && (

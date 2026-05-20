@@ -166,22 +166,18 @@ export function useProfileStore() {
 
   /** Move a TBR entry onto the bookshelf — removes from TBR and adds to profile. */
   const promoteFromTbr = useCallback((tbrEntryId: string): ProfileEntry | null => {
-    let promoted: ProfileEntry | null = null;
-    setTbr((prev) => {
-      const entry = prev.find((e) => e.id === tbrEntryId);
-      if (!entry) return prev;
-      const profileEntry: ProfileEntry = {
-        id: crypto.randomUUID(),
-        book: entry.book,
-        ratings: structuredClone(DEFAULT_RATINGS),
-        addedAt: new Date().toISOString(),
-      };
-      promoted = profileEntry;
-      setProfile((p) => [profileEntry, ...p]);
-      return prev.filter((e) => e.id !== tbrEntryId);
-    });
-    return promoted;
-  }, []);
+    const current = tbr.find((e) => e.id === tbrEntryId);
+    if (!current) return null;
+    const profileEntry: ProfileEntry = {
+      id: crypto.randomUUID(),
+      book: current.book,
+      ratings: structuredClone(DEFAULT_RATINGS),
+      addedAt: new Date().toISOString(),
+    };
+    setProfile((p) => [profileEntry, ...p]);
+    setTbr((prev) => prev.filter((e) => e.id !== tbrEntryId));
+    return profileEntry;
+  }, [tbr]);
 
   return {
     profile,
