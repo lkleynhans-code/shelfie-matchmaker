@@ -52,9 +52,7 @@ export async function searchBooks(
   try {
     const books = await searchSpotifyAudiobooks(query, spotify);
     return { books };
-  } catch (spotifyErr) {
-    const spotifyMsg = spotifyErr instanceof Error ? spotifyErr.message : String(spotifyErr);
-
+  } catch {
     // Always try iTunes audiobook search as a fallback when Spotify fails
     try {
       const books = await searchItunesAudiobooks(query);
